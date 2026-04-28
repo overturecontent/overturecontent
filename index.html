@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overture — Content Distribution at Scale</title>
+<meta name="description" content="Overture turns your long-form content into short-form clips distributed across TikTok, Instagram Reels, and YouTube Shorts. Performance-based — you pay only for verified views.">
+<meta property="og:title" content="Overture — Content Distribution at Scale">
+<meta property="og:description" content="Turn your content into a short-form distribution machine. Pay only for real, verified views.">
+<meta property="og:url" content="https://overturecontent.com">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Overture — Content Distribution at Scale">
+<meta name="twitter:description" content="Turn your content into a short-form distribution machine. Pay only for real, verified views.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0C0A08;
+  --bg2:       #131108;
+  --bg3:       #1A1608;
+  --bone:      #F5EFE0;
+  --cream:     #EDE5D0;
+  --dim:       #907860;
+  --mute:      #584838;
+  --border:    #2A2010;
+  --borderlt:  #3A3018;
+  --gold:      #C8A96A;
+  --gold-lt:   #E8CC88;
+  --gold-dim:  #8A7040;
+  --gold-glow: rgba(200,169,106,0.18);
+  --gold-faint:rgba(200,169,106,0.07);
+  --ember:     #E87040;
+  --ember-dim: rgba(232,112,64,0.12);
+  --fire-core: #FFB84A;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--bone);font-family:'DM Sans',sans-serif;font-weight:300;overflow-x:hidden;cursor:none;}
+
+/* ── GRAIN ── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");pointer-events:none;z-index:9990;opacity:.6;}
+
+/* ── CURSOR ── */
+#cur{width:8px;height:8px;background:var(--gold);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;box-shadow:0 0 10px var(--gold);}
+#cur-ring{width:34px;height:34px;border:1px solid var(--gold);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;opacity:.5;transition:width .25s,height .25s,opacity .25s,border-color .25s;}
+#cur-ring.h{width:58px;height:58px;opacity:.25;border-color:var(--gold-lt);}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 68px;height:78px;display:flex;align-items:center;justify-content:space-between;transition:all .5s;}
+nav.sc{background:rgba(12,10,8,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);}
+.nl{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:300;letter-spacing:.18em;text-transform:uppercase;color:var(--bone);text-decoration:none;}
+.nr{display:flex;gap:40px;align-items:center;list-style:none;}
+.nr a{font-size:12px;font-weight:400;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-decoration:none;transition:color .2s;}
+.nr a:hover{color:var(--bone);}
+.nbtn{color:var(--bg)!important;background:var(--gold)!important;padding:12px 26px;border-radius:3px;font-weight:500!important;font-size:12px!important;letter-spacing:.1em!important;transition:background .25s,box-shadow .25s!important;box-shadow:0 0 20px rgba(200,169,106,.3);}
+.nbtn:hover{background:var(--gold-lt)!important;box-shadow:0 0 32px rgba(200,169,106,.5)!important;}
+
+/* ── BUTTONS ── */
+.bp{display:inline-flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--bg);background:var(--gold);padding:18px 44px;border-radius:3px;text-decoration:none;transition:all .3s;cursor:none;border:none;box-shadow:0 0 30px rgba(200,169,106,.35);}
+.bp:hover{background:var(--gold-lt);transform:translateY(-2px);box-shadow:0 8px 40px rgba(200,169,106,.5);}
+.bs{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:transparent;padding:18px 44px;border-radius:3px;text-decoration:none;border:1px solid var(--gold-dim);transition:all .3s;cursor:none;}
+.bs:hover{border-color:var(--gold);color:var(--gold-lt);transform:translateY(-2px);}
+
+/* ── REVEAL ── */
+.rv{opacity:0;transform:translateY(36px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);}
+.rv.in{opacity:1;transform:none;}
+.rv.d1{transition-delay:.12s;}.rv.d2{transition-delay:.24s;}.rv.d3{transition-delay:.36s;}.rv.d4{transition-delay:.48s;}
+@keyframes fadeUp{to{opacity:1;transform:none;}}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-20px) rotate(3deg);}}
+@keyframes flicker{0%,100%{opacity:.8;transform:scaleY(1) scaleX(1);}25%{opacity:1;transform:scaleY(1.05) scaleX(.97);}50%{opacity:.9;transform:scaleY(.98) scaleX(1.02);}75%{opacity:1;transform:scaleY(1.03) scaleX(.98);}}
+@keyframes rise{0%{transform:translateY(0) scaleX(1);opacity:1;}100%{transform:translateY(-120px) scaleX(.6);opacity:0;}}
+@keyframes pulse{0%,100%{opacity:.6;transform:scale(1);}50%{opacity:1;transform:scale(1.06);}}
+@keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@keyframes rotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes shimmer{0%{background-position:-200% center;}100%{background-position:200% center;}}
+
+.div{width:100%;height:1px;background:var(--border);}
+
+/* ─────────────────────────────
+   HERO
+───────────────────────────── */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:150px 68px 110px;position:relative;overflow:hidden;}
+
+/* Fire canvas background */
+#fireCanvas{position:absolute;inset:0;opacity:.22;pointer-events:none;width:100%;height:100%;}
+
+/* Warm gradient orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;}
+.o1{width:700px;height:700px;background:radial-gradient(circle,rgba(200,169,106,.22) 0%,rgba(232,112,64,.08) 40%,transparent 70%);top:-150px;right:-150px;animation:float 14s ease-in-out infinite;}
+.o2{width:450px;height:450px;background:radial-gradient(circle,rgba(232,112,64,.14) 0%,transparent 65%);bottom:-60px;left:-80px;animation:float 18s ease-in-out 3s infinite reverse;}
+.o3{width:350px;height:350px;background:radial-gradient(circle,rgba(200,169,106,.10) 0%,transparent 70%);top:30%;left:35%;animation:pulse 10s ease-in-out infinite;}
+
+/* Rotating rings */
+.hero-rings{position:absolute;right:-60px;top:50%;transform:translateY(-50%);width:540px;height:540px;pointer-events:none;}
+.ring{position:absolute;border-radius:50%;border:1px solid;}
+.r1{inset:0;border-color:rgba(200,169,106,.3);animation:rotate 45s linear infinite;}
+.r2{inset:50px;border-color:rgba(200,169,106,.15);animation:rotate 70s linear infinite reverse;}
+.r3{inset:110px;border-color:rgba(232,112,64,.25);animation:rotate 35s linear infinite;}
+.r4{inset:175px;border-color:rgba(200,169,106,.12);animation:rotate 55s linear infinite reverse;}
+.rdot{position:absolute;width:10px;height:10px;border-radius:50%;top:-5px;left:50%;margin-left:-5px;box-shadow:0 0 16px currentColor;}
+
+.hero-label{font-size:11px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin-bottom:40px;display:flex;align-items:center;gap:16px;opacity:0;animation:fadeUp .8s ease .2s forwards;}
+.hero-label::before{content:'';width:40px;height:1px;background:var(--gold);}
+
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(60px,9.5vw,130px);font-weight:300;line-height:.93;letter-spacing:-.02em;color:var(--bone);max-width:1020px;opacity:0;animation:fadeUp 1.1s cubic-bezier(.16,1,.3,1) .35s forwards;}
+.hero h1 em{font-style:italic;background:linear-gradient(135deg,var(--gold),var(--gold-lt),var(--ember));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+.hero-sub{font-size:18px;font-weight:300;line-height:1.9;color:var(--dim);max-width:560px;margin-top:44px;opacity:0;animation:fadeUp .9s ease .7s forwards;}
+
+.hero-actions{display:flex;gap:16px;margin-top:60px;align-items:center;flex-wrap:wrap;opacity:0;animation:fadeUp .9s ease .95s forwards;}
+
+.hero-bar{margin-top:80px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;opacity:0;animation:fadeUp .9s ease 1.2s forwards;}
+.hbi{background:rgba(26,22,8,.7);border:1px solid var(--borderlt);border-radius:12px;padding:28px 32px;backdrop-filter:blur(10px);transition:border-color .3s,background .3s;position:relative;overflow:hidden;}
+.hbi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);transform:scaleX(0);transition:transform .4s;}
+.hbi:hover{border-color:var(--gold-dim);background:rgba(32,26,8,.9);}
+.hbi:hover::before{transform:scaleX(1);}
+.hbi-inner{display:flex;align-items:center;gap:16px;}
+.hbi-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;filter:drop-shadow(0 0 6px rgba(200,169,106,.5));}
+.hbi-big{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--bone);margin-bottom:4px;}
+.hbi-sub{font-size:13px;font-weight:300;color:var(--dim);line-height:1.5;}
+
+/* ─────────────────────────────
+   MARQUEE
+───────────────────────────── */
+.mq{padding:24px 0;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;}
+.mqi{display:inline-flex;animation:marquee 24s linear infinite;}
+.mqitem{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:300;font-style:italic;color:var(--dim);padding:0 52px;display:inline-flex;align-items:center;gap:52px;}
+.mqitem::after{content:'✦';font-size:9px;color:var(--gold);font-style:normal;}
+
+/* ─────────────────────────────
+   SECTIONS
+───────────────────────────── */
+.sec{padding:140px 68px;position:relative;}
+.sec-label{font-size:11px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin-bottom:24px;display:flex;align-items:center;gap:16px;}
+.sec-label::before{content:'';width:28px;height:1px;background:var(--gold);}
+h2.st{font-family:'Cormorant Garamond',serif;font-size:clamp(42px,5.5vw,72px);font-weight:300;line-height:1.06;color:var(--bone);max-width:800px;margin-bottom:30px;}
+h2.st em{font-style:italic;background:linear-gradient(135deg,var(--gold),var(--gold-lt));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sb{font-size:17px;font-weight:300;line-height:1.9;color:var(--dim);max-width:580px;}
+
+/* ─────────────────────────────
+   PROBLEM
+───────────────────────────── */
+.prob-bg{background:var(--bg2);}
+.prob-grid{display:grid;grid-template-columns:1fr 1fr;gap:90px;align-items:center;margin-top:88px;}
+.prob-items{display:flex;flex-direction:column;}
+.prob-item{padding:36px 0;border-bottom:1px solid var(--border);display:flex;gap:28px;align-items:flex-start;transition:padding-left .3s;}
+.prob-item:first-child{border-top:1px solid var(--border);}
+.prob-item:hover{padding-left:10px;}
+.pi-num{font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--gold-dim);padding-top:5px;min-width:24px;}
+.pi-t{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;color:var(--bone);margin-bottom:10px;}
+.pi-d{font-size:15px;font-weight:300;line-height:1.8;color:var(--dim);}
+
+/* Fire card */
+.fire-card{position:relative;background:var(--bg3);border:1px solid var(--borderlt);border-radius:16px;padding:48px;overflow:hidden;}
+.fire-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--ember),var(--gold),var(--ember),transparent);}
+.fire-card::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(232,112,64,.12),transparent 60%);pointer-events:none;}
+.fc-flames{position:absolute;bottom:-10px;left:0;right:0;height:120px;pointer-events:none;overflow:hidden;}
+.flame{position:absolute;bottom:0;border-radius:50% 50% 20% 20%;animation:flicker 2s ease-in-out infinite;}
+.f1{width:60px;height:90px;background:linear-gradient(to top,var(--ember),var(--fire-core),transparent);left:10%;animation-delay:0s;opacity:.6;}
+.f2{width:45px;height:70px;background:linear-gradient(to top,var(--ember),var(--gold-lt),transparent);left:25%;animation-delay:.4s;opacity:.5;}
+.f3{width:80px;height:110px;background:linear-gradient(to top,var(--ember),var(--fire-core),transparent);left:45%;animation-delay:.2s;opacity:.7;}
+.f4{width:50px;height:80px;background:linear-gradient(to top,var(--gold-dim),var(--gold),transparent);left:65%;animation-delay:.6s;opacity:.5;}
+.f5{width:65px;height:95px;background:linear-gradient(to top,var(--ember),var(--fire-core),transparent);left:80%;animation-delay:.1s;opacity:.6;}
+.fc-glow{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:300px;height:200px;background:radial-gradient(ellipse,rgba(232,112,64,.20),transparent 70%);pointer-events:none;}
+.fc-tag{font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:22px;position:relative;z-index:1;}
+.fc-q{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;font-style:italic;line-height:1.4;color:var(--bone);margin-bottom:36px;position:relative;z-index:1;}
+.fc-line{width:44px;height:1px;background:linear-gradient(to right,var(--gold),transparent);margin-bottom:20px;position:relative;z-index:1;}
+.fc-sub{font-size:13px;font-weight:400;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);position:relative;z-index:1;}
+.compare-table{margin-top:32px;position:relative;z-index:1;display:flex;flex-direction:column;gap:0;border:1px solid var(--borderlt);border-radius:12px;overflow:hidden;}
+.ct-header{display:grid;grid-template-columns:1fr 1fr 1fr;background:rgba(12,10,8,.8);}
+.ct-h{padding:14px 16px;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);text-align:center;}
+.ct-h:first-child{text-align:left;border-right:1px solid var(--border);}
+.ct-h:nth-child(2){border-right:1px solid var(--border);color:var(--dim);}
+.ct-h:last-child{color:var(--gold);font-weight:600;}
+.ct-row{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border);transition:background .2s;}
+.ct-row:hover{background:rgba(200,169,106,.04);}
+.ct-cell{padding:18px 16px;font-size:14px;font-weight:300;color:var(--dim);text-align:center;display:flex;align-items:center;justify-content:center;}
+.ct-cell:first-child{text-align:left;justify-content:flex-start;font-size:15px;font-weight:500;color:var(--bone);letter-spacing:.01em;border-right:1px solid var(--border);}
+.ct-cell:nth-child(2){border-right:1px solid var(--border);font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;color:var(--cream);}
+.ct-cell:last-child{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--gold-lt);}
+.ct-win{background:rgba(200,169,106,.06);}
+.ct-cross{color:var(--cream);font-size:16px;}
+.ct-check{color:var(--gold);font-size:16px;text-shadow:0 0 8px rgba(200,169,106,.5);}
+
+/* ─────────────────────────────
+   CLIPPING
+───────────────────────────── */
+.clip-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-top:88px;}
+.clip-card{background:var(--bg);padding:48px 44px;transition:background .35s;position:relative;overflow:hidden;}
+.clip-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 0%,var(--gold-faint),transparent 55%);opacity:0;transition:opacity .4s;}
+.clip-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);transform:scaleX(0);transition:transform .4s;}
+.clip-card:hover{background:var(--bg2);}
+.clip-card:hover::before,.clip-card:hover::after{opacity:1;transform:scaleX(1);}
+.cc-n{font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:24px;}
+.cc-t{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400;color:var(--bone);margin-bottom:16px;line-height:1.2;}
+.cc-d{font-size:15px;font-weight:300;line-height:1.85;color:var(--dim);}
+
+/* ─────────────────────────────
+   FIRE DIVIDER — ART SECTION
+───────────────────────────── */
+.fire-break{height:480px;background:var(--bg);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.fire-break::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,var(--bg),transparent 25%,transparent 75%,var(--bg));z-index:3;pointer-events:none;}
+#fireBreak{position:absolute;inset:0;opacity:1;width:100%;height:100%;}
+.fire-text{position:relative;z-index:4;text-align:center;padding:0 40px;}
+.ft-q{font-family:'Cormorant Garamond',serif;font-size:clamp(30px,4.5vw,58px);font-weight:300;font-style:italic;color:var(--bone);max-width:740px;line-height:1.25;text-shadow:0 0 60px rgba(200,169,106,.4);}
+.ft-q em{font-style:normal;background:linear-gradient(135deg,var(--gold),var(--fire-core));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* ─────────────────────────────
+   HOW IT WORKS
+───────────────────────────── */
+.how-bg{background:var(--bg2);}
+.how-grid{display:grid;grid-template-columns:1fr 1fr;gap:110px;align-items:start;margin-top:88px;}
+.steps{display:flex;flex-direction:column;}
+.step{padding:40px 0;border-bottom:1px solid var(--border);display:flex;gap:30px;align-items:flex-start;transition:padding-left .3s;}
+.step:first-child{border-top:1px solid var(--border);}
+.step:hover{padding-left:12px;}
+.sn{font-family:'Cormorant Garamond',serif;font-size:14px;color:var(--gold-dim);padding-top:6px;min-width:26px;}
+.st2{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400;color:var(--bone);margin-bottom:12px;}
+.sd2{font-size:15px;font-weight:300;line-height:1.85;color:var(--dim);}
+
+.how-aside{display:flex;flex-direction:column;gap:16px;position:sticky;top:108px;}
+.ha{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:30px 36px;display:flex;justify-content:space-between;align-items:center;transition:all .3s;position:relative;overflow:hidden;}
+.ha::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--gold),var(--ember));transform:scaleY(0);transition:transform .35s;transform-origin:bottom;}
+.ha:hover{border-color:var(--gold-dim);background:var(--bg2);}
+.ha:hover::after{transform:scaleY(1);}
+.ha-tag{font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);margin-bottom:7px;}
+.ha-title{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:300;color:var(--bone);}
+.ha-right{text-align:right;}
+.ha-num{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--gold);}
+.ha-sub{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);}
+
+/* ─────────────────────────────
+   WHY OVERTURE
+───────────────────────────── */
+.why-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-top:88px;}
+.wc{background:var(--bg);padding:56px;transition:background .35s;position:relative;overflow:hidden;}
+.wc::before{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);transform:scaleX(0);transition:transform .45s;}
+.wc::after{content:'';position:absolute;top:0;right:0;width:120px;height:120px;background:radial-gradient(circle,var(--gold-faint),transparent 70%);opacity:0;transition:opacity .35s;}
+.wc:hover{background:var(--bg2);}
+.wc:hover::before{transform:scaleX(1);}
+.wc:hover::after{opacity:1;}
+.wc-icon{width:52px;height:52px;border:1px solid var(--borderlt);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:28px;font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--gold);transition:all .3s;position:relative;z-index:1;}
+.wc:hover .wc-icon{border-color:var(--gold-dim);background:var(--gold-faint);box-shadow:0 0 20px rgba(200,169,106,.2);}
+.wc-t{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400;color:var(--bone);margin-bottom:16px;position:relative;z-index:1;}
+.wc-d{font-size:15px;font-weight:300;line-height:1.85;color:var(--dim);position:relative;z-index:1;}
+
+/* ─────────────────────────────
+   FAQ
+───────────────────────────── */
+.faq-bg{background:var(--bg2);}
+.faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:110px;margin-top:88px;align-items:start;}
+.faq-list{display:flex;flex-direction:column;}
+.faq-item{border-bottom:1px solid var(--border);}
+.faq-item:first-child{border-top:1px solid var(--border);}
+.faq-q{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--bone);padding:28px 0;display:flex;justify-content:space-between;align-items:center;cursor:none;transition:color .2s;gap:24px;line-height:1.3;}
+.faq-q:hover{color:var(--gold-lt);}
+.faq-icon{width:32px;height:32px;border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:300;color:var(--dim);transition:all .3s;flex-shrink:0;}
+.faq-item.open .faq-icon{transform:rotate(45deg);border-color:var(--gold);color:var(--gold);box-shadow:0 0 12px rgba(200,169,106,.3);}
+.faq-a{font-size:15px;font-weight:300;line-height:1.9;color:var(--dim);max-height:0;overflow:hidden;transition:max-height .45s ease,padding .3s;}
+.faq-item.open .faq-a{max-height:260px;padding-bottom:28px;}
+
+.faq-aside{background:var(--bg3);border:1px solid var(--borderlt);border-radius:16px;padding:56px;display:flex;flex-direction:column;justify-content:space-between;min-height:480px;position:relative;overflow:hidden;}
+.faq-aside::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),var(--ember),var(--gold),transparent);}
+.fa-glow{position:absolute;bottom:-40px;right:-40px;width:300px;height:300px;background:radial-gradient(circle,rgba(200,169,106,.14),transparent 70%);pointer-events:none;}
+.fa-flames{position:absolute;bottom:0;left:0;right:0;height:80px;overflow:hidden;opacity:.5;}
+.fa-f1{position:absolute;bottom:0;width:40px;height:65px;background:linear-gradient(to top,var(--ember),transparent);border-radius:50% 50% 20% 20%;left:15%;animation:flicker 2.5s ease-in-out infinite;}
+.fa-f2{position:absolute;bottom:0;width:55px;height:80px;background:linear-gradient(to top,var(--gold-dim),var(--gold),transparent);border-radius:50% 50% 20% 20%;left:45%;animation:flicker 1.8s ease-in-out .3s infinite;}
+.fa-f3{position:absolute;bottom:0;width:35px;height:55px;background:linear-gradient(to top,var(--ember),transparent);border-radius:50% 50% 20% 20%;left:75%;animation:flicker 2.2s ease-in-out .6s infinite;}
+.fa-tag{font-size:11px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:24px;position:relative;z-index:1;}
+.fa-title{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:300;line-height:1.1;color:var(--bone);margin-bottom:20px;position:relative;z-index:1;}
+.fa-title em{font-style:italic;background:linear-gradient(135deg,var(--gold),var(--gold-lt));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.fa-sub{font-size:16px;font-weight:300;line-height:1.85;color:var(--dim);margin-bottom:44px;position:relative;z-index:1;}
+.fa-email{margin-top:20px;font-size:13px;color:var(--mute);letter-spacing:.1em;position:relative;z-index:1;}
+
+/* ─────────────────────────────
+   FINAL CTA
+───────────────────────────── */
+.cta-sec{padding:200px 68px;text-align:center;position:relative;overflow:hidden;background:var(--bg);}
+.cta-bg-fire{position:absolute;bottom:0;left:0;right:0;height:300px;pointer-events:none;}
+.cta-o1{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:800px;height:800px;background:radial-gradient(circle,rgba(200,169,106,.12) 0%,rgba(232,112,64,.06) 40%,transparent 70%);pointer-events:none;animation:pulse 8s ease-in-out infinite;}
+.cta-o2{position:absolute;top:30%;right:5%;width:350px;height:350px;background:radial-gradient(circle,rgba(232,112,64,.08) 0%,transparent 70%);pointer-events:none;animation:pulse 11s ease-in-out infinite reverse;}
+.cta-tag{font-size:11px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin-bottom:40px;position:relative;}
+.cta-h{font-family:'Cormorant Garamond',serif;font-size:clamp(52px,7.5vw,104px);font-weight:300;line-height:.96;color:var(--bone);max-width:860px;margin:0 auto 68px;position:relative;}
+.cta-h em{font-style:italic;background:linear-gradient(135deg,var(--gold),var(--gold-lt),var(--ember));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.cta-actions{display:flex;gap:18px;justify-content:center;align-items:center;flex-wrap:wrap;position:relative;}
+
+/* ─────────────────────────────
+   FOOTER
+───────────────────────────── */
+footer{padding:56px 68px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.fl{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:300;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);text-decoration:none;transition:color .2s;}
+.fl:hover{color:var(--gold);}
+.flinks{display:flex;gap:36px;list-style:none;}
+.flinks a{font-size:12px;font-weight:400;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);text-decoration:none;transition:color .2s;}
+.flinks a:hover{color:var(--gold);}
+.fcopy{font-size:12px;color:var(--mute);letter-spacing:.06em;}
+.footer-socials{display:flex;gap:16px;align-items:center;}
+.fsoc{color:var(--mute);transition:color .2s,transform .2s;display:flex;align-items:center;justify-content:center;text-decoration:none;}
+.fsoc:hover{color:var(--gold);transform:translateY(-2px);}
+.fcopy span{color:var(--gold);}
+
+@media(max-width:860px){
+  nav{padding:0 24px;}.nr{display:none;}
+  .sec,.hero,.cta-sec{padding:90px 24px;}
+  .hero{padding:120px 24px 80px;}
+  .hero-bar{flex-direction:column;gap:28px;margin-top:60px;}
+  .hero-bar{grid-template-columns:1fr;}
+  .prob-grid,.how-grid,.faq-grid{grid-template-columns:1fr;gap:60px;}
+  .clip-grid,.why-grid{grid-template-columns:1fr;}
+  footer{padding:36px 24px;flex-direction:column;gap:20px;text-align:center;}
+  .flinks{flex-wrap:wrap;justify-content:center;}
+  .hero-rings{display:none;}
+  .fire-break{height:320px;}
+}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+<div id="cur-ring"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="#" class="nl">Overture</a>
+  <ul class="nr">
+    <li><a href="#clipping">The process</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#why">Why us</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="https://calendly.com/studio-overturecontent/30min" class="nbtn">Book a call</a></li>
+  </ul>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section class="hero">
+  <canvas id="fireCanvas"></canvas>
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3"></div>
+  <div class="hero-rings">
+    <div class="ring r1"><div class="rdot" style="background:var(--gold);color:var(--gold);"></div></div>
+    <div class="ring r2"></div>
+    <div class="ring r3"><div class="rdot" style="background:var(--ember);color:var(--ember);top:auto;bottom:-5px;"></div></div>
+    <div class="ring r4"></div>
+  </div>
+  <div class="hero-label">Content distribution at scale</div>
+  <h1>Your content.<br>Every platform.<br><em>Every day.</em></h1>
+  <p class="hero-sub">Whether you're a creator with a growing audience or a brand with a story to tell — Overture turns your long-form content into a short-form distribution machine. You set the campaign budget. We handle everything else — from clipper recruitment to quality control and reporting. You pay only for real, verified views.</p>
+  <div class="hero-actions">
+    <a href="https://calendly.com/studio-overturecontent/30min" class="bp">Book a free strategy call →</a>
+    <a href="#clipping" class="bs">See how it works</a>
+  </div>
+    <div class="hero-bar">
+    <div class="hbi">
+      <div class="hbi-inner">
+        <div class="hbi-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="10" stroke="#C8A96A" stroke-width="1"/><path d="M9 7.5L15 11L9 14.5V7.5Z" fill="#C8A96A"/></svg></div>
+        <div>
+          <div class="hbi-big">Pay only for views</div>
+          <div class="hbi-sub">Performance-based — zero retainers, zero risk</div>
+        </div>
+      </div>
+    </div>
+    <div class="hbi">
+      <div class="hbi-inner">
+        <div class="hbi-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 3C11 3 5 7 5 12C5 15.3 7.7 18 11 18C14.3 18 17 15.3 17 12C17 7 11 3 11 3Z" stroke="#C8A96A" stroke-width="1" stroke-linejoin="round"/><path d="M11 18V21M8 21H14" stroke="#C8A96A" stroke-width="1" stroke-linecap="round"/><circle cx="11" cy="12" r="2" fill="#C8A96A"/></svg></div>
+        <div>
+          <div class="hbi-big">Clips stay live forever</div>
+          <div class="hbi-sub">Views keep coming long after your campaign ends</div>
+        </div>
+      </div>
+    </div>
+    <div class="hbi">
+      <div class="hbi-inner">
+        <div class="hbi-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="4" r="2" stroke="#C8A96A" stroke-width="1"/><circle cx="4" cy="17" r="2" stroke="#C8A96A" stroke-width="1"/><circle cx="18" cy="17" r="2" stroke="#C8A96A" stroke-width="1"/><path d="M11 6L4 15M11 6L18 15M4 17H18" stroke="#C8A96A" stroke-width="1" stroke-linecap="round"/></svg></div>
+        <div>
+          <div class="hbi-big">Distributed at scale</div>
+          <div class="hbi-sub">Dozens of clippers across TikTok, Reels &amp; Shorts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="div"></div>
+
+<!-- ══ MARQUEE ══ -->
+<div class="mq">
+  <div class="mqi">
+    <span class="mqitem">TikTok distribution</span><span class="mqitem">Instagram Reels</span><span class="mqitem">YouTube Shorts</span><span class="mqitem">Performance-based pricing</span><span class="mqitem">Pay per view</span><span class="mqitem">Verified organic traffic</span><span class="mqitem">Short-form at scale</span><span class="mqitem">Zero retainers</span><span class="mqitem">Content that spreads</span><span class="mqitem">TikTok distribution</span><span class="mqitem">Instagram Reels</span><span class="mqitem">YouTube Shorts</span><span class="mqitem">Performance-based pricing</span><span class="mqitem">Pay per view</span><span class="mqitem">Verified organic traffic</span><span class="mqitem">Short-form at scale</span><span class="mqitem">Zero retainers</span><span class="mqitem">Content that spreads</span>
+  </div>
+</div>
+
+<div class="div"></div>
+
+<!-- ══ PROBLEM ══ -->
+<section class="sec prob-bg">
+  <div class="sec-label rv">The problem</div>
+  <h2 class="st rv d1">Great content deserves<br><em>to be seen everywhere.</em></h2>
+  <p class="sb rv d2">Most creators and brands produce powerful long-form content — then watch it reach only the audience they already have. Without a short-form distribution system, the majority of your content's potential is left completely untapped.</p>
+  <div class="prob-grid">
+    <div class="prob-items rv d1">
+      <div class="prob-item">
+        <div class="pi-num">01</div>
+        <div>
+          <div class="pi-t">Long-form alone won't grow you</div>
+          <div class="pi-d">Whether you're a streamer, podcaster, or brand — your long-form content reaches people who already know you. Short-form clips on TikTok, Reels, and Shorts are where new audiences discover you in 2026.</div>
+        </div>
+      </div>
+      <div class="prob-item">
+        <div class="pi-num">02</div>
+        <div>
+          <div class="pi-t">Doing it properly is a full-time job</div>
+          <div class="pi-d">Finding the best moments, editing, captioning, formatting for each platform, posting consistently — done right, it takes more time than you have. So it either doesn't happen, or happens badly.</div>
+        </div>
+      </div>
+      <div class="prob-item">
+        <div class="pi-num">03</div>
+        <div>
+          <div class="pi-t">Volume is where most people fall short</div>
+          <div class="pi-d">The algorithm rewards consistency and volume. Ten clips distributed across three platforms gives you thirty chances to reach a new audience today. One post gives you one. The gap compounds every single week.</div>
+        </div>
+      </div>
+    </div>
+    <div class="rv d2">
+      <div class="fire-card">
+        <div class="fc-flames">
+          <div class="flame f1"></div><div class="flame f2"></div>
+          <div class="flame f3"></div><div class="flame f4"></div><div class="flame f5"></div>
+        </div>
+        <div class="fc-glow"></div>
+        <div class="fc-tag">Why short-form distribution wins</div>
+        <div class="fc-q">"Paid ads buy attention. Short-form clips <em style="-webkit-text-fill-color:var(--gold-lt);color:var(--gold-lt);font-style:normal;">earn</em> it."</div>
+        <div class="fc-line"></div>
+        <div class="compare-table">
+          <div class="ct-header">
+            <div class="ct-h">Method</div>
+            <div class="ct-h">Paid Ads</div>
+            <div class="ct-h">Overture</div>
+          </div>
+          <div class="ct-row">
+            <div class="ct-cell">Cost per 1,000 views</div>
+            <div class="ct-cell">$8–15</div>
+            <div class="ct-cell ct-win">$0.05–$2</div>
+          </div>
+          <div class="ct-row">
+            <div class="ct-cell">Engagement quality</div>
+            <div class="ct-cell"><span class="ct-cross">Low</span></div>
+            <div class="ct-cell ct-win"><span class="ct-check">Organic</span></div>
+          </div>
+          <div class="ct-row">
+            <div class="ct-cell">Stops when budget ends</div>
+            <div class="ct-cell"><span class="ct-cross">Yes</span></div>
+            <div class="ct-cell ct-win"><span class="ct-check">Clips stay live</span></div>
+          </div>
+          <div class="ct-row">
+            <div class="ct-cell">Pay only for results</div>
+            <div class="ct-cell"><span class="ct-cross">No</span></div>
+            <div class="ct-cell ct-win"><span class="ct-check">Always</span></div>
+          </div>
+          <div class="ct-row">
+            <div class="ct-cell">Builds real following</div>
+            <div class="ct-cell"><span class="ct-cross">Rarely</span></div>
+            <div class="ct-cell ct-win"><span class="ct-check">Yes</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="div"></div>
+
+<!-- ══ WHAT IS CLIPPING ══ -->
+<section class="sec" id="clipping">
+  <div class="sec-label rv">How it works</div>
+  <h2 class="st rv d1">One piece of content.<br><em>Distributed everywhere.</em></h2>
+  <p class="sb rv d2">Clipping is the process of turning long-form content into short-form clips distributed across every platform simultaneously. We handle the entire process — from extracting the best moments to posting and reporting — while you focus on what you do best.</p>
+  <div class="clip-grid rv d2">
+    <div class="clip-card">
+      <div class="cc-n">01</div>
+      <div class="cc-t">You share your content</div>
+      <div class="cc-d">A YouTube link, Twitch VOD, podcast recording, branded video — whatever long-form content you already produce. Nothing new required from you.</div>
+    </div>
+    <div class="clip-card">
+      <div class="cc-n">02</div>
+      <div class="cc-t">We set your campaign live</div>
+      <div class="cc-d">You set a budget and provide a brief — your guidelines, style preferences, topics to avoid. We launch your campaign to our vetted network of short-form editors immediately.</div>
+    </div>
+    <div class="clip-card">
+      <div class="cc-n">03</div>
+      <div class="cc-t">Clippers go to work</div>
+      <div class="cc-d">Our vetted clippers claim your campaign, extract the best moments, add captions, and post across TikTok, Instagram Reels, and YouTube Shorts. Multiple clippers working simultaneously means maximum volume and speed.</div>
+    </div>
+    <div class="clip-card">
+      <div class="cc-n">04</div>
+      <div class="cc-t">You pay only for verified views</div>
+      <div class="cc-d">Clippers earn a fixed rate per 1,000 verified organic views they generate. Clips that don't perform earn nothing — and cost you nothing extra. Pricing is discussed on your strategy call.</div>
+    </div>
+    <div class="clip-card">
+      <div class="cc-n">05</div>
+      <div class="cc-t">We report throughout</div>
+      <div class="cc-d">We send you regular performance updates throughout the campaign — views generated, clips live, top performers. You always know exactly what's happening with your budget in real time.</div>
+    </div>
+    <div class="clip-card">
+      <div class="cc-n">06</div>
+      <div class="cc-t">Campaign ends, we pitch the next</div>
+      <div class="cc-d">When your budget runs out, we deliver a full performance report. Then we pitch you the next campaign — with data from the first to inform the strategy. Better results every round.</div>
+    </div>
+  </div>
+</section>
+
+<div class="div"></div>
+
+<!-- ══ FIRE BREAK ══ -->
+<div class="fire-break">
+  <canvas id="fireBreak"></canvas>
+  <div class="fire-text">
+    <div class="ft-q rv">"Attention is the new currency.<br><em>We help you earn it.</em>"</div>
+  </div>
+</div>
+
+<div class="div"></div>
+
+<!-- ══ HOW IT WORKS ══ -->
+<section class="sec how-bg" id="how">
+  <div class="sec-label rv">The process</div>
+  <h2 class="st rv d1">Simple to start.<br><em>Built to scale.</em></h2>
+  <p class="sb rv d2">From your first campaign brief to ongoing distribution — here's exactly how Overture works, step by step.</p>
+  <div class="how-grid">
+    <div class="steps rv d1">
+      <div class="step">
+        <span class="sn">01</span>
+        <div>
+          <div class="st2">Brief us & set your budget</div>
+          <div class="sd2">Tell us about your content, your audience, and your goals. Set your campaign budget and provide your content brief — your guidelines, style preferences, topics to avoid. We launch your campaign immediately. That's your entire involvement.</div>
+        </div>
+      </div>
+      <div class="step">
+        <span class="sn">02</span>
+        <div>
+          <div class="st2">We distribute across every platform</div>
+          <div class="sd2">Our vetted network of clippers claims your campaign and gets to work immediately — extracting moments, editing, captioning, and posting across TikTok, Instagram Reels, and YouTube Shorts. The campaign runs until the budget is fully spent on verified views.</div>
+        </div>
+      </div>
+      <div class="step">
+        <span class="sn">03</span>
+        <div>
+          <div class="st2">We report, then pitch the next campaign</div>
+          <div class="sd2">Throughout the campaign you receive regular performance updates. When the budget runs out, we deliver a full report — views generated, top clips, platform breakdown. Then we come back with a proposal for the next campaign, informed by real data.</div>
+        </div>
+      </div>
+    </div>
+    <div class="how-aside rv d2">
+      <div class="ha">
+        <div><div class="ha-tag">How you're charged</div><div class="ha-title">Per 1,000 verified views</div></div>
+        <div class="ha-right"><div class="ha-num">RPM</div><div class="ha-sub">Rate per 1k</div></div>
+      </div>
+      <div class="ha">
+        <div><div class="ha-tag">Platforms covered</div><div class="ha-title">TikTok · Reels · Shorts</div></div>
+        <div class="ha-right"><div class="ha-num">3</div><div class="ha-sub">Platforms</div></div>
+      </div>
+      <div class="ha">
+        <div><div class="ha-tag">Minimum campaign</div><div class="ha-title">Starter budget</div></div>
+        <div class="ha-right"><div class="ha-num">€500</div><div class="ha-sub">To start</div></div>
+      </div>
+      <div class="ha">
+        <div><div class="ha-tag">Your setup time</div><div class="ha-title">Share content & brief</div></div>
+        <div class="ha-right"><div class="ha-num">~30</div><div class="ha-sub">Minutes</div></div>
+      </div>
+      <div class="ha">
+        <div><div class="ha-tag">Campaign length</div><div class="ha-title">Runs until budget is spent</div></div>
+        <div class="ha-right"><div class="ha-num">∞</div><div class="ha-sub">No fixed end date</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="div"></div>
+
+<!-- ══ WHY OVERTURE ══ -->
+<section class="sec" id="why">
+  <div class="sec-label rv">Why Overture</div>
+  <h2 class="st rv d1">Performance-based.<br><em>Zero risk.</em></h2>
+  <p class="sb rv d2">Traditional agencies charge monthly retainers regardless of results. We built the opposite — a model where every dollar is earned by real, verified clipper performance.</p>
+  <div class="why-grid rv d2">
+    <div class="wc">
+      <div class="wc-icon">01</div>
+      <div class="wc-t">Zero risk — pay for results only</div>
+      <div class="wc-d">Your budget goes into your campaign. Clippers earn only when their clips generate verified organic views. Clips that don't perform cost you nothing. No retainers, no wasted money — ever.</div>
+    </div>
+    <div class="wc">
+      <div class="wc-icon">02</div>
+      <div class="wc-t">Volume no individual can match</div>
+      <div class="wc-d">A single editor produces a handful of clips per day. Our network deploys dozens of clippers on your campaign simultaneously — the volume, speed, and platform coverage is impossible to replicate with any solo hire or internal team.</div>
+    </div>
+    <div class="wc">
+      <div class="wc-icon">03</div>
+      <div class="wc-t">Far cheaper than paid advertising</div>
+      <div class="wc-d">Paid ads on TikTok or Instagram average $8–15 CPM. Organic short-form distribution through Overture typically delivers views at a fraction of that cost — with authentic engagement that converts into real followers and real customers.</div>
+    </div>
+    <div class="wc">
+      <div class="wc-icon">04</div>
+      <div class="wc-t">Consistent communication, always</div>
+      <div class="wc-d">We send regular performance updates throughout every campaign. You always know exactly how your budget is performing — no black boxes, no waiting until the end. We treat your budget like it's our own.</div>
+    </div>
+  </div>
+</section>
+
+<div class="div"></div>
+
+<!-- ══ FAQ ══ -->
+<section class="sec faq-bg" id="faq">
+  <div class="sec-label rv">Questions</div>
+  <h2 class="st rv d1">Everything you<br>need to <em>know.</em></h2>
+  <div class="faq-grid">
+    <div class="faq-list rv d1">
+      <div class="faq-item">
+        <div class="faq-q">What kind of content works with Overture? <div class="faq-icon">+</div></div>
+        <div class="faq-a">Any long-form video content — YouTube videos, Twitch or Kick streams, podcast recordings, interviews, webinars. Ideally 30+ minutes long so there are multiple strong clip moments. The more content you have, the more clips we can distribute.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How does performance-based pricing work? <div class="faq-icon">+</div></div>
+        <div class="faq-a">You set a campaign budget. Clippers earn a fixed RPM (rate per 1,000 verified views) for every view they generate. The campaign runs until the budget is exhausted. Full pricing details are covered on your strategy call.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How do you verify that views are real? <div class="faq-icon">+</div></div>
+        <div class="faq-a">Every submission is reviewed for authenticity — engagement rates, account history, view velocity, and geographic data. Bot traffic and manipulated views are flagged and excluded. We hold all payouts for 7 days after campaign close before any money moves.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Do I control how my content is clipped? <div class="faq-icon">+</div></div>
+        <div class="faq-a">Yes. Before launch you provide a brief — clip style preferences, topics to avoid, specific moments you want featured, brand guidelines. Clippers follow your guidelines as a condition of participating in the campaign.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What is the minimum budget? <div class="faq-icon">+</div></div>
+        <div class="faq-a">Starter campaigns begin at €500. This gives you meaningful distribution scale to test the model and see real results before committing to larger campaigns.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How long does a campaign run? <div class="faq-icon">+</div></div>
+        <div class="faq-a">Campaigns run until the budget is fully spent on verified views — there's no fixed end date. Distribution begins within 24–48 hours of launch. Throughout the campaign you receive regular performance updates, and a full report at close — total views, clips created, top performers, and platform breakdown.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How do you keep us updated during a campaign? <div class="faq-icon">+</div></div>
+        <div class="faq-a">We send regular performance reports throughout every campaign — not just at the end. You'll always know how many views have been generated, which clips are performing best, and how much budget remains. After the campaign closes, we come back with a full breakdown and a proposal for the next campaign.</div>
+      </div>
+    </div>
+    <div class="faq-aside rv d2">
+      <div class="fa-glow"></div>
+      <div class="fa-flames">
+        <div class="fa-f1"></div><div class="fa-f2"></div><div class="fa-f3"></div>
+      </div>
+      <div style="position:relative;z-index:1;">
+        <div class="fa-tag">Ready to start?</div>
+        <div class="fa-title">Ready to put your<br><em>content to work?</em></div>
+        <div class="fa-sub">Book a free 30-minute strategy call. We'll look at your content — whether you're a creator or a brand — map out what a campaign could achieve, and answer every question. No pressure, no commitment.</div>
+        <a href="https://calendly.com/studio-overturecontent/30min" class="bp" style="font-size:14px;padding:16px 36px;">Book a free call →</a>
+        <div class="fa-email">studio@overturecontent.com</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="div"></div>
+
+<!-- ══ FINAL CTA ══ -->
+<section class="cta-sec">
+  <div class="cta-o1"></div>
+  <div class="cta-o2"></div>
+  <div class="cta-tag rv">Start distributing today</div>
+  <h2 class="cta-h rv d1">Your content is ready.<br><em>Let's make it spread.</em></h2>
+  <div class="cta-actions rv d2">
+    <a href="https://calendly.com/studio-overturecontent/30min" class="bp" style="font-size:16px;padding:20px 52px;">Book a strategy call — it's free →</a>
+    <a href="mailto:studio@overturecontent.com" class="bs" style="font-size:14px;padding:20px 44px;">Send us a message</a>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <a href="#" class="fl">Overture</a>
+  <ul class="flinks">
+    <li><a href="#clipping">The process</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#why">Why Overture</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="mailto:studio@overturecontent.com">Contact</a></li>
+  </ul>
+  <div class="footer-socials">
+    <a href="https://instagram.com/overturecontent" target="_blank" class="fsoc" aria-label="Instagram">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+    </a>
+    <a href="https://tiktok.com/@overturecontent" target="_blank" class="fsoc" aria-label="TikTok">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M10 12C8.3 12 7 13.3 7 15C7 16.7 8.3 18 10 18C11.7 18 13 16.7 13 15V6H16C16 6 16.5 9 19 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a href="https://x.com/overturecontent" target="_blank" class="fsoc" aria-label="X / Twitter">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.5"/><path d="M7 7L17 17M17 7L7 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </a>
+  </div>
+  <div class="fcopy">Overture 2026 &nbsp;·&nbsp; studio@overturecontent.com</div>
+</footer>
+
+<script>
+/* ── Cursor ── */
+const cur=document.getElementById('cur'),ring=document.getElementById('cur-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  cur.style.transform=`translate(${mx-4}px,${my-4}px)`;
+});
+(function loop(){
+  rx+=(mx-rx-17)*.13;ry+=(my-ry-17)*.13;
+  ring.style.transform=`translate(${rx}px,${ry}px)`;
+  requestAnimationFrame(loop);
+})();
+document.querySelectorAll('a,button,.faq-q,.clip-card,.wc,.ha,.prob-item').forEach(el=>{
+  el.addEventListener('mouseenter',()=>ring.classList.add('h'));
+  el.addEventListener('mouseleave',()=>ring.classList.remove('h'));
+});
+
+/* ── Nav ── */
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>nav.classList.toggle('sc',scrollY>50));
+
+/* ── Reveal ── */
+const obs=new IntersectionObserver(e=>{
+  e.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');obs.unobserve(x.target);}});
+},{threshold:.08,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.rv').forEach(el=>obs.observe(el));
+
+/* ── FAQ ── */
+document.querySelectorAll('.faq-q').forEach(q=>{
+  q.addEventListener('click',()=>{
+    const item=q.parentElement,open=item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i=>i.classList.remove('open'));
+    if(!open)item.classList.add('open');
+  });
+});
+
+/* ── Fire particle system ── */
+function createFireSystem(canvasId, opts={}) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  function resize() {
+    canvas.width = canvas.parentElement ? canvas.parentElement.offsetWidth : window.innerWidth;
+    canvas.height = canvas.parentElement ? canvas.parentElement.offsetHeight : window.innerHeight;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = [];
+  const W = () => canvas.width;
+  const H = () => canvas.height;
+  const NUM = opts.num || 180;
+  const colors = [
+    [255, 184, 74],   // fire core
+    [232, 112, 64],   // ember
+    [200, 169, 106],  // gold
+    [255, 120, 40],   // orange
+    [255, 200, 80],   // bright gold
+  ];
+
+  for (let i = 0; i < NUM; i++) {
+    particles.push(spawnParticle(true));
+  }
+
+  function spawnParticle(init) {
+    const col = colors[Math.floor(Math.random() * colors.length)];
+    return {
+      x: Math.random() * (W() || 800),
+      y: init ? Math.random() * (H() || 400) : (H() || 400) + 10,
+      vx: (Math.random() - 0.5) * 0.8,
+      vy: -(Math.random() * 1.8 + 0.6),
+      life: init ? Math.random() : 0,
+      maxLife: Math.random() * 0.6 + 0.4,
+      size: Math.random() * 3 + 1,
+      col,
+    };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W(), H());
+    particles.forEach((p, i) => {
+      p.x += p.vx + Math.sin(p.life * 8) * 0.3;
+      p.y += p.vy;
+      p.life += 0.008;
+      if (p.life >= p.maxLife) particles[i] = spawnParticle(false);
+
+      const t = p.life / p.maxLife;
+      const alpha = t < 0.2 ? t / 0.2 : 1 - ((t - 0.2) / 0.8);
+      const size = Math.max(0.01, p.size * (1 - t * 0.5));
+      
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2.5);
+      grad.addColorStop(0, `rgba(${p.col[0]},${p.col[1]},${p.col[2]},${alpha * .9})`);
+      grad.addColorStop(0.5, `rgba(${p.col[0]},${p.col[1]},${p.col[2]},${alpha * .4})`);
+      grad.addColorStop(1, `rgba(${p.col[0]},${p.col[1]},${p.col[2]},0)`);
+      
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size * 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+createFireSystem('fireCanvas', { num: 200 });
+createFireSystem('fireBreak', { num: 280 });
+</script>
+</body>
+</html>
