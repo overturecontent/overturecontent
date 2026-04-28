@@ -808,19 +808,8 @@ function createFireSystem(canvasId, opts={}) {
   draw();
 }
 
-const isMobile = window.innerWidth <= 860 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-if (!isMobile) {
-  createFireSystem('fireCanvas', { num: 200 });
-  createFireSystem('fireBreak', { num: 280 });
-} else {
-  // On mobile replace fire canvas with warm gradient glow
-  const fc = document.getElementById('fireCanvas');
-  if (fc) { fc.style.display = 'none'; }
-  const fb = document.getElementById('fireBreak');
-  if (fb) { fb.style.display = 'none'; }
-  document.querySelector('.hero').style.background = 'radial-gradient(ellipse at 70% 40%, rgba(200,169,106,.12), transparent 60%), radial-gradient(ellipse at 20% 80%, rgba(232,112,64,.08), transparent 50%)';
-  document.querySelector('.fire-break').style.background = 'radial-gradient(ellipse at 50% 50%, rgba(200,169,106,.15), rgba(232,112,64,.08) 40%, transparent 70%)';
-}
+createFireSystem('fireCanvas', { num: 200 });
+createFireSystem('fireBreak', { num: 280 });
 </script>
 </body>
 </html>
