@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Overture — Content Distribution at Scale</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Crect width='500' height='500' rx='80' fill='%230C0A08'/%3E%3Cg transform='translate(250,250)'%3E%3Cpolygon points='0,-180 180,0 0,180 -180,0' fill='none' stroke='%23C8A96A' stroke-width='6'/%3E%3Cpolygon points='0,-135 135,0 0,135 -135,0' fill='none' stroke='%238A7040' stroke-width='2.5'/%3E%3Ccircle cx='0' cy='0' r='77' fill='none' stroke='%23C8A96A' stroke-width='5'/%3E%3Ccircle cx='0' cy='0' r='50' fill='none' stroke='%23C8A96A' stroke-width='3.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Crect width='500' height='500' rx='80' fill='%230C0A08'/%3E%3Cg transform='translate(250,250)'%3E%3Cpolygon points='0,-180 180,0 0,180 -180,0' fill='none' stroke='%23C8A96A' stroke-width='6'/%3E%3Cpolygon points='0,-135 135,0 0,135 -135,0' fill='none' stroke='%238A7040' stroke-width='2.5'/%3E%3Ccircle cx='0' cy='0' r='77' fill='none' stroke='%23C8A96A' stroke-width='5'/%3E%3Ccircle cx='0' cy='0' r='50' fill='none' stroke='%23C8A96A' stroke-width='3.5'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="description" content="Overture turns your long-form content into short-form clips distributed across TikTok, Instagram Reels, and YouTube Shorts. Performance-based — you pay only for verified views.">
 <meta property="og:title" content="Overture — Content Distribution at Scale">
 <meta property="og:description" content="Turn your content into a short-form distribution machine. Pay only for real, verified views.">
@@ -323,7 +325,15 @@ footer{padding:56px 68px;border-top:1px solid var(--border);display:flex;justify
 
 <!-- NAV -->
 <nav id="nav">
-  <a href="#" class="nl">Overture</a>
+  <a href="#" class="nl" style="display:flex;align-items:center;gap:12px;text-decoration:none;">
+    <svg width="32" height="32" viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="0,-90 90,0 0,90 -90,0" fill="none" stroke="#C8A96A" stroke-width="6"/>
+      <polygon points="0,-67 67,0 0,67 -67,0" fill="none" stroke="#8A7040" stroke-width="3"/>
+      <circle cx="0" cy="0" r="38.7" fill="none" stroke="#C8A96A" stroke-width="5"/>
+      <circle cx="0" cy="0" r="25.2" fill="none" stroke="#C8A96A" stroke-width="3.5"/>
+    </svg>
+    <span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;letter-spacing:.18em;text-transform:uppercase;color:#F5EFE0;">OVERTURE</span>
+  </a>
   <ul class="nr">
     <li><a href="#clipping">The process</a></li>
     <li><a href="#how">How it works</a></li>
@@ -808,8 +818,19 @@ function createFireSystem(canvasId, opts={}) {
   draw();
 }
 
-createFireSystem('fireCanvas', { num: 200 });
-createFireSystem('fireBreak', { num: 280 });
+const isMobile = window.innerWidth <= 860 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+if (!isMobile) {
+  createFireSystem('fireCanvas', { num: 200 });
+  createFireSystem('fireBreak', { num: 280 });
+} else {
+  // On mobile replace fire canvas with warm gradient glow
+  const fc = document.getElementById('fireCanvas');
+  if (fc) { fc.style.display = 'none'; }
+  const fb = document.getElementById('fireBreak');
+  if (fb) { fb.style.display = 'none'; }
+  document.querySelector('.hero').style.background = 'radial-gradient(ellipse at 70% 40%, rgba(200,169,106,.12), transparent 60%), radial-gradient(ellipse at 20% 80%, rgba(232,112,64,.08), transparent 50%)';
+  document.querySelector('.fire-break').style.background = 'radial-gradient(ellipse at 50% 50%, rgba(200,169,106,.15), rgba(232,112,64,.08) 40%, transparent 70%)';
+}
 </script>
 </body>
 </html>
