@@ -14,7 +14,7 @@
   --line:rgba(84,164,255,.12); --line2:rgba(84,164,255,.24);
   --blue:#1BA8FF; --sky:#54CCFF; --deep:#0E6FD8;
   --ice:#EAF2FC; --slate:#8E9AB0;
-  --r:20px; --maxw:1140px;
+  --r:20px; --maxw:1140px; --stripH:140px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -64,9 +64,9 @@ nav.open .mobile-menu{display:flex}
 #glow{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%}
 
 /* ---------- hero ---------- */
-.hero{position:relative;min-height:88vh;display:flex;align-items:center;padding:60px 0 96px;overflow:clip}
+.hero{position:relative;min-height:88vh;display:flex;align-items:center;padding:60px 0 calc(var(--stripH) + 36px);overflow:clip}
 #cutCanvas{position:absolute;inset:0;z-index:1;width:100%;height:100%}
-.hero .wrap{z-index:2}
+.hero .wrap{z-index:2;width:100%}
 .hero-inner{max-width:640px}
 .eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:.14em;color:var(--sky);background:rgba(27,168,255,.07);border:1px solid var(--line2);border-radius:999px;padding:8px 16px;margin-bottom:28px}
 .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--sky);box-shadow:0 0 10px var(--sky);animation:pulse 2.4s ease-in-out infinite}
@@ -76,10 +76,6 @@ nav.open .mobile-menu{display:flex}
 .hero p.sub{font-size:18px;max-width:52ch;margin:26px 0 34px}
 .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 .hero-note{font-size:13.5px;margin-top:18px;opacity:.85}
-.scroll-hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.24em;color:var(--slate)}
-.scroll-hint .bar{width:1px;height:34px;background:linear-gradient(var(--sky),transparent);animation:drip 2s ease-in-out infinite;transform-origin:top}
-@keyframes drip{0%{transform:scaleY(0)}45%{transform:scaleY(1)}100%{transform:scaleY(1);opacity:0}}
-@media(max-width:700px){.scroll-hint{display:none}}
 
 /* ---------- marquee ---------- */
 .marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0;overflow:hidden;position:relative;z-index:2;background:rgba(7,11,20,.5)}
@@ -177,7 +173,7 @@ footer{border-top:1px solid var(--line);padding:36px 0;font-size:13.5px;position
 @media(prefers-reduced-motion:reduce){
   .rv{opacity:1;transform:none;filter:none;transition:none}
   .marquee-track{animation:none}
-  .scroll-hint .bar,.eyebrow .dot{animation:none}
+  .eyebrow .dot{animation:none}
   html{scroll-behavior:auto}
 }
 </style>
@@ -227,7 +223,6 @@ footer{border-top:1px solid var(--line);padding:36px 0;font-size:13.5px;position
       <p class="hero-note rv">15 minutes, no deck. We look at your content and give you a plain answer.</p>
     </div>
   </div>
-  <div class="scroll-hint" aria-hidden="true"><span class="bar"></span>SCROLL</div>
 </header>
 
 <div class="marquee" aria-hidden="true">
@@ -435,227 +430,258 @@ var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   els.forEach(function(el){ io.observe(el); });
 })();
 
-/* ---------- hero canvas: waveform sliced into clips ---------- */
+/* ---------- hero: master timeline strip ---------- */
 (function(){
   var cv = document.getElementById('cutCanvas');
   var ctx = cv.getContext('2d');
-  var W, H, dpr, bars = [], cards = [], t0 = performance.now(), lastCut = -1e9;
-  var mx = 0, tx = 0;
+  var W, H, S, stripTop, gridL, gridR, railH, railCY, laneTop, laneBot, yW, maxHalf, yRul;
+  var chipW = 0, chipH = 0, chipGap = 0, chipsOn = false, chipStart = 0;
+  var barW, barPitch, bars = [], scrim = null;
+  var LOOP = 16.5, SWEEP = 16;
+  var CUTS = [2.0, 4.5, 7.5, 9.5, 12.5, 14.5];
+  var t0 = performance.now(), born = performance.now(), running = false, phase = 0;
 
-  function size(){
-    var host = cv.parentElement;
-    W = host.clientWidth; H = host.clientHeight;
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cv.width = W * dpr; cv.height = H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    layout();
-    build();
-  }
-  function build(){
-    bars = [];
-    var n = Math.floor(W / 14);
-    for (var i = 0; i < n; i++){
-      bars.push({ p1: Math.random()*6.28, p2: Math.random()*6.28, s1: .22+Math.random()*.3, s2: .14+Math.random()*.22, cut: 0 });
-    }
-  }
-  /* keep the artwork clear of the text column: draw beside it when there is
-     room, otherwise in the strip below it, and skip flying cards when cramped */
-  var heroInner = document.querySelector('.hero-inner');
-  var sideMode = true, drawOn = true, wyBase = 0, zxBase = 0;
-  function layout(){
-    var hostR = cv.parentElement.getBoundingClientRect();
-    var tR = heroInner.getBoundingClientRect();
-    var textRight = tR.right - hostR.left;
-    var textBottom = tR.bottom - hostR.top;
-    if (W - (textRight + 44) >= 150){
-      /* enough room beside the text column */
-      sideMode = true; drawOn = true;
-      zxBase = Math.max(W * 0.42, textRight + 44);
-      wyBase = H * 0.62;
-    } else {
-      /* draw below the text, and only if the strip truly fits;
-         the playhead reaches 99px above the wave center, so demand 110 */
-      sideMode = false;
-      zxBase = 24;
-      wyBase = textBottom + 110;
-      drawOn = wyBase <= H - 44;
-    }
-  }
-  function waveY(){ return wyBase; }
-  function zoneX(){ return zxBase; }
+  function clamp01(u){ return Math.max(0, Math.min(1, u)); }
+  function eoc(u){ u = clamp01(u); return 1 - Math.pow(1 - u, 3); }
+  function eob(u){ u = clamp01(u); var k = 1.2; return 1 + (k + 1) * Math.pow(u - 1, 3) + k * Math.pow(u - 1, 2); }
 
-  function barH(b, t){
-    return 10 + Math.abs(Math.sin(t*b.s1 + b.p1))*38 + Math.abs(Math.sin(t*b.s2*1.7 + b.p2))*16;
-  }
-
-  /* a freshly cut bar collapses, then grows back */
-  function cutFactor(b, now){
-    if (!b.cut) return 1;
-    var a = now - b.cut;
-    if (a < 250) return 1 - .88 * (a / 250);
-    if (a < 1400) return .12 + .88 * ((a - 250) / 1150);
-    b.cut = 0; return 1;
-  }
-
-  function spawnCard(x, y){
-    cards.push({
-      x: x, y: y,
-      dx: 60 + Math.random()*90,
-      dy: 150 + Math.random()*80,
-      rot: (Math.random()-.5)*.09,
-      w: 44, h: 78,
-      born: performance.now(),
-      life: 4600 + Math.random()*900,
-      seed: Math.random()*6.28
-    });
-    if (cards.length > 5) cards.shift();
-    /* the cut visibly takes a piece out of the wave */
-    var idx = Math.round((x - 4) / 14);
-    for (var j = idx - 1; j <= idx + 2; j++){
-      if (bars[j]) bars[j].cut = performance.now();
-    }
-  }
-
-  function roundRect(x, y, w, h, r){
+  function rr(x, y, w, h, r){
     ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.arcTo(x+w, y, x+w, y+h, r);
-    ctx.arcTo(x+w, y+h, x, y+h, r);
-    ctx.arcTo(x, y+h, x, y, r);
-    ctx.arcTo(x, y, x+w, y, r);
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
 
-  function draw(now){
-    var t = (now - t0) / 1000;
+  function tierS(w, vh){
+    var tiers = [150, 140, 120, 104, 88];
+    var i = w >= 1600 ? 0 : w >= 1240 ? 1 : w >= 1024 ? 2 : w >= 768 ? 3 : 4;
+    if (vh < 760) i = Math.min(4, i + 1);
+    return tiers[i];
+  }
+
+  function size(){
+    S = tierS(window.innerWidth, window.innerHeight);
+    document.documentElement.style.setProperty('--stripH', S + 'px');
+    var host = cv.parentElement;
+    W = host.clientWidth; H = host.clientHeight;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    stripTop = H - S;
+    gridL = Math.max(24, (W - 1140) / 2 + 24);
+    gridR = W - gridL;
+    chipsOn = W >= 768;
+    if (W >= 1600){ chipW = 20; chipH = 36; chipGap = 10; }
+    else if (W >= 1240){ chipW = 18; chipH = 32; chipGap = 8; }
+    else if (W >= 1024){ chipW = 16; chipH = 28; chipGap = 7; }
+    else { chipW = 14; chipH = 25; chipGap = 6; }
+    railH = chipsOn ? chipH + 12 : 0;
+    railCY = stripTop + 8 + railH / 2;
+    chipStart = gridL + (W < 1024 ? 104 : 124);
+    yRul = stripTop + S - 14;
+    laneTop = stripTop + 10 + railH;
+    laneBot = yRul - 8;
+    yW = (laneTop + laneBot) / 2;
+    maxHalf = .46 * (laneBot - laneTop);
+    if (W >= 1600){ barW = 3; barPitch = 8; }
+    else if (W >= 1024){ barW = 3; barPitch = 7; }
+    else { barW = 2.5; barPitch = 6; }
+    bars = [];
+    var x0 = Math.max(0, gridL - 40), x1 = Math.min(W, gridR + 40);
+    for (var x = x0; x <= x1; x += barPitch){
+      bars.push({ x: x, h: maxHalf * (.22 + .78 * Math.pow(Math.random(), 1.1)) });
+    }
+    scrim = ctx.createLinearGradient(0, stripTop, 0, H);
+    scrim.addColorStop(0, 'rgba(5,8,15,0)');
+    scrim.addColorStop(1, 'rgba(5,8,15,.55)');
+  }
+
+  function cutX(c){ return gridL + (gridR - gridL) * (c / SWEEP); }
+
+  function draw(t, now){
     ctx.clearRect(0, 0, W, H);
-    if (!drawOn) return;
-    mx += (tx - mx) * .06;
+    var ga = reduced ? 1 : clamp01((now - born - 400) / 600);
+    if (ga <= 0) return;
+    ctx.globalAlpha = ga;
 
-    var zx = zoneX(), zw = W - zx;
-    var wy = waveY() + mx * 8;
+    /* scrim keeps the strip legible over the glow orbs */
+    ctx.fillStyle = scrim;
+    ctx.fillRect(0, stripTop, W, S);
 
-    /* playhead sweeps once, left to right, fades out and restarts */
-    var prog = (t / 10) % 1;
-    var headX = zx + 14 + (zw - 60) * prog;
-    var headA = Math.max(0, Math.min(1, prog / .04, (1 - prog) / .04));
+    var headX = gridL + (gridR - gridL) * Math.min(1, t / SWEEP);
+    var headA = t >= SWEEP ? 0 : Math.min(1, t / .3, (SWEEP - t) / .3);
+    var resetF = t < SWEEP ? 1 : Math.max(0, 1 - (t - SWEEP) / .4);
 
-    /* waveform */
-    var startI = Math.floor(zx / 14);
-    for (var i = startI; i < bars.length; i++){
-      var x = i * 14 + 4;
-      if (x < zx || x > W - 16) continue;
-      var h = barH(bars[i], t) * cutFactor(bars[i], now);
-      var d = Math.abs(x - headX);
-      var glow = Math.max(0, 1 - d / 150) * headA;
-      var cr = Math.round(44 + 40*glow), cg = Math.round(116 + 88*glow), cb = Math.round(196 + 59*glow);
-      ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + (0.22 + glow * 0.55) + ')';
-      roundRect(x, wy - h/2, 5, h, 2.5);
-      ctx.fill();
+    /* cut traces: the recording visibly accrues cuts */
+    for (var i = 0; i < CUTS.length; i++){
+      var c = CUTS[i];
+      if (t < c) continue;
+      var tc = t - c;
+      var xB = cutX(c), xA = xB - 64;
+      var inA = eoc(tc / .18);
+      var settle = clamp01((tc - .18) / .42);
+      var fillA = (.10 + (.05 - .10) * settle) * inA * resetF;
+      var lineA = (.45 + (.18 - .45) * settle) * inA * resetF;
+      ctx.fillStyle = 'rgba(27,168,255,' + fillA + ')';
+      ctx.fillRect(xA, laneTop, xB - xA, laneBot - laneTop);
+      ctx.fillStyle = 'rgba(84,204,255,' + lineA + ')';
+      ctx.fillRect(xA, laneTop, xB - xA, 1);
     }
 
-    /* source label ties the wave to the story */
-    if (sideMode){
-      ctx.font = '10px "JetBrains Mono", monospace';
-      ctx.fillStyle = 'rgba(142,154,176,.85)';
-      ctx.textAlign = 'left';
-      ctx.fillText('YOUR CONTENT', zx + 14, wy + 56);
-    }
-
-    /* playhead: soft sheath + bright core, dot sits on the line end */
-    if (headA > 0){
-      var sheath = ctx.createLinearGradient(0, wy - 80, 0, wy + 80);
-      sheath.addColorStop(0, 'rgba(84,204,255,0)');
-      sheath.addColorStop(.5, 'rgba(84,204,255,' + (.16 * headA) + ')');
-      sheath.addColorStop(1, 'rgba(84,204,255,0)');
-      ctx.fillStyle = sheath;
-      ctx.fillRect(headX - 3, wy - 80, 6, 160);
-      var core = ctx.createLinearGradient(0, wy - 80, 0, wy + 80);
-      core.addColorStop(0, 'rgba(84,204,255,0)');
-      core.addColorStop(.5, 'rgba(84,204,255,' + (.85 * headA) + ')');
-      core.addColorStop(1, 'rgba(84,204,255,0)');
-      ctx.fillStyle = core;
-      ctx.fillRect(headX - 1, wy - 80, 2, 160);
-      ctx.globalAlpha = headA;
-      ctx.beginPath(); ctx.arc(headX, wy - 80, 3, 0, 7);
-      ctx.fillStyle = '#54CCFF'; ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-
-    /* a cut takes a piece of the wave and leaves as a clip */
-    if (sideMode && headA > .9 && cards.length < 3 && now - lastCut > 2600 + Math.random()*500){
-      lastCut = now;
-      spawnCard(Math.min(headX, W - 130), wy);
-    }
-
-    /* clip cards: ease in, rise gently, fade out */
-    for (var c = cards.length - 1; c >= 0; c--){
-      var k = cards[c];
-      var age = now - k.born;
-      if (age > k.life){ cards.splice(c, 1); continue; }
-      var u = age / k.life;
-      var ein = Math.min(1, u / .16);
-      ein = 1 - Math.pow(1 - ein, 3);
-      var fade = Math.min(ein, u > .78 ? (1 - u) / .22 : 1);
-      var rise = 1 - Math.pow(1 - u, 2);
-      var px = Math.min(k.x + rise * k.dx, W - 42);
-      var py = k.y - rise * k.dy;
-      var sc = (.9 + ein * .1) * (1 - u * .08);
-
-      ctx.save();
-      ctx.translate(px, py);
-      ctx.rotate(k.rot * rise);
-      ctx.scale(sc, sc);
-      ctx.globalAlpha = fade * .95;
-
-      roundRect(-k.w/2, -k.h/2, k.w, k.h, 9);
-      ctx.fillStyle = 'rgba(9,15,27,.94)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(84,204,255,' + (.25 + ein * .3) + ')';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      /* mini bars inside card */
-      for (var m = 0; m < 5; m++){
-        var mh = 5 + Math.abs(Math.sin(t*1.1 + k.seed + m)) * 13;
-        ctx.fillStyle = 'rgba(84,204,255,.7)';
-        roundRect(-16 + m*7, mh/-2 + 6, 4, mh, 2);
-        ctx.fill();
+    /* waveform: static heights, alive only near the playhead */
+    for (var b = 0; b < bars.length; b++){
+      var bar = bars[b];
+      var d = Math.abs(bar.x - headX);
+      var prox = Math.max(0, 1 - d / 120) * headA;
+      var h = bar.h;
+      var pw = Math.max(0, 1 - d / 60) * headA;
+      if (pw > 0) h *= 1 + .12 * Math.sin(t * 9.42 + b) * pw;
+      for (var ci = 0; ci < CUTS.length; ci++){
+        var tcc = t - CUTS[ci];
+        if (tcc < 0 || tcc > 1.05) continue;
+        var cx = cutX(CUTS[ci]);
+        if (bar.x >= cx - 64 && bar.x <= cx){
+          h *= tcc < .15 ? 1 - .6 * (tcc / .15) : .4 + .6 * eoc((tcc - .15) / .9);
+        }
       }
-      /* play triangle */
-      ctx.beginPath();
-      ctx.moveTo(-4, -26); ctx.lineTo(5, -20.5); ctx.lineTo(-4, -15);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(234,242,252,.85)';
+      var cr = Math.round(44 + 40 * prox), cg = Math.round(116 + 88 * prox), cb = Math.round(196 + 59 * prox);
+      ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + (.20 + .60 * prox) + ')';
+      rr(bar.x, yW - h, barW, h * 2, barW / 2);
       ctx.fill();
-      ctx.restore();
     }
+
+    /* timecode ruler */
+    var k = 0;
+    ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    for (var rx = gridL; rx <= gridR; rx += 24){
+      var major = (k % 5 === 0);
+      ctx.fillStyle = major ? 'rgba(142,154,176,.45)' : 'rgba(142,154,176,.22)';
+      ctx.fillRect(rx, yRul - (major ? 7 : 4), 1, major ? 7 : 4);
+      if (major){
+        var secs = (k / 5) * 6;
+        ctx.fillStyle = 'rgba(142,154,176,.5)';
+        ctx.fillText(('0' + Math.floor(secs / 60)).slice(-2) + ':' + ('0' + (secs % 60)).slice(-2), rx + 4, yRul - 10);
+      }
+      k++;
+    }
+
+    /* playhead, contained inside the strip */
+    if (headA > 0){
+      ctx.fillStyle = 'rgba(84,204,255,' + (.12 * headA) + ')';
+      ctx.fillRect(headX - 3, stripTop + 6, 6, S - 12);
+      ctx.fillStyle = 'rgba(84,204,255,' + (.9 * headA) + ')';
+      ctx.fillRect(headX - .75, stripTop + 6, 1.5, S - 12);
+      ctx.globalAlpha = ga * headA;
+      ctx.beginPath(); ctx.arc(headX, stripTop + 6, 2.5, 0, 7);
+      ctx.fillStyle = '#54CCFF'; ctx.fill();
+      ctx.globalAlpha = ga;
+    }
+
+    /* chips fly from the cut into the rail */
+    if (chipsOn){
+      for (var n = 0; n < CUTS.length; n++){
+        var start = CUTS[n] + .12;
+        if (t < start) continue;
+        var fp = clamp01((t - start) / .52);
+        var slotX = chipStart + n * (chipW + chipGap) + chipW / 2;
+        var sx = cutX(CUTS[n]) - 32, sy = yW;
+        var pxc = sx + (slotX - sx) * eoc(fp);
+        var pyc = sy + (railCY - sy) * eoc(fp);
+        var sc = .6 + .4 * eob(fp);
+        var alpha = clamp01((t - start) / .15);
+        var strokeAl = fp >= 1 ? .28 + .22 * Math.max(0, 1 - (t - start - .52) / .8) : .5;
+        var ex = 0;
+        if (t > SWEEP){
+          var ep = clamp01((t - SWEEP - n * .04) / .3);
+          alpha *= 1 - ep;
+          ex = -8 * ep;
+        }
+        if (alpha <= 0) continue;
+        ctx.save();
+        ctx.translate(pxc, pyc + ex);
+        ctx.scale(sc, sc);
+        ctx.globalAlpha = ga * alpha;
+        rr(-chipW / 2, -chipH / 2, chipW, chipH, 4);
+        ctx.fillStyle = 'rgba(9,15,27,.92)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(84,204,255,' + strokeAl + ')';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        var mh = [.3, .6, .4];
+        for (var m = 0; m < 3; m++){
+          var hh = chipH * mh[m];
+          ctx.fillStyle = 'rgba(84,204,255,.65)';
+          rr(-5 + m * 3.5, -hh / 2, 2, hh, 1);
+          ctx.fill();
+        }
+        ctx.restore();
+        ctx.globalAlpha = ga;
+      }
+    }
+
+    /* label + counter */
+    ctx.font = (W < 1024 ? '8.5px' : '9px') + ' "JetBrains Mono", monospace';
+    ctx.fillStyle = 'rgba(142,154,176,.6)';
+    ctx.textAlign = 'left';
+    ctx.fillText('YOUR CONTENT', gridL, chipsOn ? railCY + 3 : stripTop + 18);
+
+    var cnt = 0, fl = 0, delay = chipsOn ? .64 : .3;
+    if (t <= SWEEP + .2){
+      for (var q = 0; q < CUTS.length; q++) if (t >= CUTS[q] + delay) cnt++;
+    }
+    for (var q2 = 0; q2 < CUTS.length; q2++){
+      var ti = CUTS[q2] + delay;
+      if (t >= ti) fl = Math.max(fl, 1 - (t - ti) / .5);
+    }
+    if (t >= SWEEP + .2) fl = Math.max(fl, 1 - (t - SWEEP - .2) / .5);
+    fl = clamp01(fl);
+    ctx.textAlign = 'right';
+    ctx.font = '10px "JetBrains Mono", monospace';
+    var pr = Math.round(142 - 58 * fl), pg = Math.round(154 + 50 * fl), pb = Math.round(176 + 79 * fl);
+    ctx.fillStyle = 'rgba(' + pr + ',' + pg + ',' + pb + ',.85)';
+    ctx.fillText('CLIPS ' + ('0' + cnt).slice(-2), gridR, chipsOn ? railCY + 3 : stripTop + 18);
+    ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   }
 
-  function loop(now){ draw(now); requestAnimationFrame(loop); }
-
-  function renderStatic(){
-    cards = [];
-    lastCut = performance.now() + 1e9;
-    if (sideMode){
-      spawnCard(zoneX() + (W - zoneX())*0.6, waveY());
-      cards[0].born = performance.now() - 1500;
-    }
-    draw(performance.now());
+  function frame(now){
+    if (!running) return;
+    draw(((now - t0) / 1000) % LOOP, now);
+    requestAnimationFrame(frame);
   }
 
   size();
-  window.addEventListener('resize', size);
-  window.addEventListener('load', size);
-  window.addEventListener('mousemove', function(e){ tx = e.clientY / window.innerHeight - .5; }, {passive:true});
+  born = performance.now();
 
   if (reduced){
-    renderStatic();
-    window.addEventListener('resize', renderStatic);
+    var staticDraw = function(){ draw(10.4, born + 5000); };
+    staticDraw();
+    window.addEventListener('resize', function(){ size(); staticDraw(); });
+    window.addEventListener('load', function(){ size(); staticDraw(); });
     return;
   }
-  requestAnimationFrame(loop);
+
+  window.addEventListener('resize', size);
+  window.addEventListener('load', size);
+
+  /* pause offscreen, keep loop phase */
+  new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if (e.isIntersecting && !running){
+        running = true;
+        t0 = performance.now() - phase;
+        requestAnimationFrame(frame);
+      } else if (!e.isIntersecting && running){
+        running = false;
+        phase = performance.now() - t0;
+      }
+    });
+  }, { threshold: .05 }).observe(cv);
 })();
 
 /* ---------- ambient glow orbs ---------- */
@@ -1036,21 +1062,6 @@ var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var nav = document.getElementById('brandLogo');
   var foot = document.getElementById('footLogo');
   if (nav && foot) foot.src = nav.src;
-})();
-
-/* ---------- keep the scroll hint clear of the hero text ---------- */
-(function(){
-  var hint = document.querySelector('.scroll-hint');
-  var inner = document.querySelector('.hero-inner');
-  if (!hint || !inner) return;
-  function chk(){
-    var hb = hint.getBoundingClientRect();
-    var ib = inner.getBoundingClientRect();
-    hint.style.visibility = (ib.bottom + 10 > hb.top && hb.width) ? 'hidden' : '';
-  }
-  window.addEventListener('resize', chk);
-  window.addEventListener('load', chk);
-  chk();
 })();
 
 /* ---------- FAQ accordion ---------- */
